@@ -4,6 +4,8 @@
 #include <fstream>
 #include <iostream>
 
+//#define ENBALE_ALL_INCLUDE_PATH
+
 inline constexpr std::filesystem::directory_options kDirectoryOptions = std::filesystem::directory_options::skip_permission_denied;
 
 inline void AddIncludePath(std::string* _pIncludeCommand, const std::filesystem::path& _Path)
@@ -44,85 +46,87 @@ int main(int Argc, char* Argv[])
 
     std::string IncludeCommand;
 
-    ////  VisualStudioのIncludeパスを全取得
-    //{
-    //  constexpr const char* kVSBasePath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019";
-    //
-    //  std::filesystem::path Directory(kVSBasePath);
-    //
-    //  //  Editionを取得  
-    //  {
-    //    constexpr const char* kEditionPriority[] = { "Enterprise", "Professional", "Community" };
-    //
-    //    const std::filesystem::directory_iterator EditionIterator(Directory, std::filesystem::directory_options::skip_permission_denied);
-    //
-    //    auto SearchEdition = [&_Iterator = EditionIterator](const char* _EditionName)->bool
-    //    {
-    //      for (auto& Entry : _Iterator)
-    //      {
-    //        if (!Entry.is_directory())
-    //        {
-    //          continue;
-    //        }
-    //
-    //        if (Entry.path().string().find(_EditionName) != std::string::npos)
-    //        {
-    //          return true;
-    //        }
-    //      }
-    //
-    //      return false;
-    //    };
-    //
-    //    for (auto& Edition : kEditionPriority)
-    //    {
-    //      if (SearchEdition(Edition))
-    //      {
-    //        Directory /= std::string(Edition) + "\\VC";
-    //        break;
-    //      }
-    //    }
-    //  }
-    //
-    //  //  Versionを取得
-    //  Directory /= "Tools\\MSVC";
-    //  Directory /= GetLatestVersion(Directory);
-    //
-    //  constexpr const char* kSearchDirectoryName = "include";
-    //  //  残りのIncludeパスを追加
-    //  for (auto& Entry : std::filesystem::recursive_directory_iterator(Directory, kDirectoryOptions))
-    //  {
-    //    if (!Entry.is_directory())
-    //    {
-    //      continue;
-    //    }
-    //
-    //    if (const std::string Path = Entry.path().string();
-    //      MatchCurrentDirectory(kSearchDirectoryName, Path))
-    //    {
-    //      AddIncludePath(&IncludeCommand, Path);
-    //    }
-    //  }
-    //}
-    //
-    ////  WindowsSDKのIncludeパスを全取得
-    //{
-    //  constexpr const char* kWinSDKBasePath = "C:\\Program Files (x86)\\Windows Kits\\10\\Include";
-    //
-    //  std::filesystem::path Directory(kWinSDKBasePath);
-    //  Directory /= GetLatestVersion(Directory);
-    //
-    //
-    //  for (auto& Entry : std::filesystem::directory_iterator(Directory, kDirectoryOptions))
-    //  {
-    //    if (!Entry.is_directory())
-    //    {
-    //      continue;
-    //    }
-    //
-    //    AddIncludePath(&IncludeCommand, Entry.path().string());
-    //  }
-    //}
+#ifdef ENBALE_ALL_INCLUDE_PATH
+    //  VisualStudioのIncludeパスを全取得
+    {
+      constexpr const char* kVSBasePath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019";
+    
+      std::filesystem::path Directory(kVSBasePath);
+    
+      //  Editionを取得  
+      {
+        constexpr const char* kEditionPriority[] = { "Enterprise", "Professional", "Community" };
+    
+        const std::filesystem::directory_iterator EditionIterator(Directory, std::filesystem::directory_options::skip_permission_denied);
+    
+        auto SearchEdition = [&_Iterator = EditionIterator](const char* _EditionName)->bool
+        {
+          for (auto& Entry : _Iterator)
+          {
+            if (!Entry.is_directory())
+            {
+              continue;
+            }
+    
+            if (Entry.path().string().find(_EditionName) != std::string::npos)
+            {
+              return true;
+            }
+          }
+    
+          return false;
+        };
+    
+        for (auto& Edition : kEditionPriority)
+        {
+          if (SearchEdition(Edition))
+          {
+            Directory /= std::string(Edition) + "\\VC";
+            break;
+          }
+        }
+      }
+    
+      //  Versionを取得
+      Directory /= "Tools\\MSVC";
+      Directory /= GetLatestVersion(Directory);
+    
+      constexpr const char* kSearchDirectoryName = "include";
+      //  残りのIncludeパスを追加
+      for (auto& Entry : std::filesystem::recursive_directory_iterator(Directory, kDirectoryOptions))
+      {
+        if (!Entry.is_directory())
+        {
+          continue;
+        }
+    
+        if (const std::string Path = Entry.path().string();
+          MatchCurrentDirectory(kSearchDirectoryName, Path))
+        {
+          AddIncludePath(&IncludeCommand, Path);
+        }
+      }
+    }
+    
+    //  WindowsSDKのIncludeパスを全取得
+    {
+      constexpr const char* kWinSDKBasePath = "C:\\Program Files (x86)\\Windows Kits\\10\\Include";
+    
+      std::filesystem::path Directory(kWinSDKBasePath);
+      Directory /= GetLatestVersion(Directory);
+    
+    
+      for (auto& Entry : std::filesystem::directory_iterator(Directory, kDirectoryOptions))
+      {
+        if (!Entry.is_directory())
+        {
+          continue;
+        }
+    
+        AddIncludePath(&IncludeCommand, Entry.path().string());
+      }
+    }
+#endif
 
     for (int i = 1; i < Argc; ++i)
     {
@@ -136,11 +140,6 @@ int main(int Argc, char* Argv[])
       std::vector<std::string> ProjectIncludePaths;
       auto AddProjectIncludePath = [&ProjectIncludePaths](std::string&& _Path)->void
       {
-        if (_Path[0] == '%')
-        {
-          return;
-        }
-
         for (auto& IncludePath : ProjectIncludePaths)
         {
           if (IncludePath == _Path)
